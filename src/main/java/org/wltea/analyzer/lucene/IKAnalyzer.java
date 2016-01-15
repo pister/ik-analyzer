@@ -37,14 +37,32 @@ public final class IKAnalyzer extends Analyzer {
 		this.setMaxWordLength(isMaxWordLength);
 	}
 
-	/* (non-Javadoc)
-	 * @see org.apache.lucene.analysis.Analyzer#tokenStream(java.lang.String, java.io.Reader)
-	 */
+    @Override
+    protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
+        TokenStreamComponents tokenStreamComponents = new TokenStreamComponents(new IKTokenizer(reader , isMaxWordLength()));
+        return tokenStreamComponents;
+    }
+    /*
+    TokenStreamComponents components = reuseStrategy.getReusableComponents(this, fieldName);
+    final Reader r = initReader(fieldName, reader);
+    if (components == null) {
+      components = createComponents(fieldName, r);
+      reuseStrategy.setReusableComponents(this, fieldName, components);
+    } else {
+      components.setReader(r);
+    }
+    return components.getTokenStream();
+     */
+
+    /* (non-Javadoc)
+         * @see org.apache.lucene.analysis.Analyzer#tokenStream(java.lang.String, java.io.Reader)
+         */
+    /*
 	@Override
 	public TokenStream tokenStream(String fieldName, Reader reader) {
 		return new IKTokenizer(reader , isMaxWordLength());
 	}
-
+      */
 	public void setMaxWordLength(boolean isMaxWordLength) {
 		this.isMaxWordLength = isMaxWordLength;
 	}

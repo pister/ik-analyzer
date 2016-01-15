@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.wltea.analyzer.lucene;
 
@@ -13,8 +13,7 @@ import java.util.Map;
 import java.util.Stack;
 
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
@@ -24,24 +23,25 @@ import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.util.Version;
 import org.wltea.analyzer.IKSegmentation;
 import org.wltea.analyzer.Lexeme;
+import org.wltea.analyzer.help.VersionUtil;
 
 /**
  * IK查询分析器
  * 实现了对分词歧义结果的非冲突排列组合
  * 有效的优化对歧义关键词的搜索命中
  * 针对IK Analyzer V3的优化实现
- * 
+ *
  * @author 林良益
  *
  */
 public final class IKQueryParser {
-	
-	
+
+
 	//查询关键字解析缓存线程本地变量
-	private static ThreadLocal<Map<String , TokenBranch>> keywordCacheThreadLocal 
+	private static ThreadLocal<Map<String , TokenBranch>> keywordCacheThreadLocal
 			= new ThreadLocal<Map<String , TokenBranch>>();
-	
-	
+
+
 	//是否采用最大词长分词
 	private static boolean isMaxWordLength = false;
 
@@ -53,14 +53,14 @@ public final class IKQueryParser {
 	public static void setMaxWordLength(boolean isMaxWordLength) {
 		IKQueryParser.isMaxWordLength = isMaxWordLength ;
 	}
-	
+
 	/**
 	 * 优化query队列
 	 * 减少Query表达式的嵌套
 	 * @param queries
 	 * @return
 	 */
-	private static Query optimizeQueries(List<Query> queries){	
+	private static Query optimizeQueries(List<Query> queries){
 		//生成当前branch 的完整query
 		if(queries.size() == 0){
 			return null;
@@ -72,9 +72,9 @@ public final class IKQueryParser {
 				mustQueries.add(q, Occur.MUST);
 			}
 			return mustQueries;
-		}			
+		}
 	}
-	
+
 	/**
 	 * 获取线程本地的解析缓存
 	 * @return
@@ -87,7 +87,7 @@ public final class IKQueryParser {
 		}
 		return keywordCache;
 	}
-	
+
 	/**
 	 * 缓存解析结果的博弈树
 	 * @param query
@@ -97,7 +97,7 @@ public final class IKQueryParser {
 		Map<String , TokenBranch> keywordCache = getTheadLocalCache();
 		return keywordCache.get(query);
 	}
-	
+
 	/**
 	 * 缓存解析结果的博弈树
 	 * @param query
@@ -107,8 +107,8 @@ public final class IKQueryParser {
 		Map<String , TokenBranch> keywordCache = getTheadLocalCache();
 		keywordCache.put(query, tb);
 	}
-		
-	
+
+
 	/**
 	 * 单连续字窜（不带空格符）单Field查询分析
 	 * @param field
@@ -123,14 +123,14 @@ public final class IKQueryParser {
 		if(query == null || "".equals(query.trim())){
 			return new TermQuery(new Term(field));
 		}
-		
+
 		//从缓存中取出已经解析的query生产的TokenBranch
 		TokenBranch root = getCachedTokenBranch(query);
 		if(root != null){
-			return optimizeQueries(root.toQueries(field)); 
+			return optimizeQueries(root.toQueries(field));
 		}else{
 			//System.out.println(System.currentTimeMillis());
-			root = new TokenBranch(null);		
+			root = new TokenBranch(null);
 			//对查询条件q进行分词
 			StringReader input = new StringReader(query.trim());
 			IKSegmentation ikSeg = new IKSegmentation(input , isMaxWordLength);
@@ -147,7 +147,7 @@ public final class IKQueryParser {
 			return optimizeQueries(root.toQueries(field));
 		}
 	}
-	
+
 	/**
 	 * 解析IK简易查询表达式
 	 * @param ikQueryExp
@@ -157,7 +157,7 @@ public final class IKQueryParser {
 		ExpressionParser ikExpParser = new ExpressionParser();
 		return ikExpParser.parserExp(ikQueryExp);
 	}
-	
+
 	/**
 	 * 单条件,单Field查询分析
 	 * @param field -- Document field name
@@ -198,7 +198,7 @@ public final class IKQueryParser {
 //		}
 //		return null;
 //	}
-	
+
 	/**
 	 * 多Field,单条件查询分析
 	 * @param fields -- Document fields name
@@ -209,20 +209,20 @@ public final class IKQueryParser {
 	public static Query parseMultiField(String[] fields , String query) throws IOException{
 		if(fields == null){
 			throw new IllegalArgumentException("parameter \"fields\" is null");
-		}		
-		BooleanQuery resultQuery = new BooleanQuery();		
+		}
+		BooleanQuery resultQuery = new BooleanQuery();
 		for(String field : fields){
 			if(field != null){
 				Query partQuery = parse(field , query);
-				if(partQuery != null && 
+				if(partQuery != null &&
 				          (!(partQuery instanceof BooleanQuery) || ((BooleanQuery)partQuery).getClauses().length>0)){
-					resultQuery.add(partQuery, Occur.SHOULD); 
+					resultQuery.add(partQuery, Occur.SHOULD);
 				}
-			}			
-		}		
+			}
+		}
 		return resultQuery;
 	}
-	
+
 	/**
 	 * 多Field,单条件,多Occur查询分析
 	 * @param fields -- Document fields name
@@ -238,51 +238,51 @@ public final class IKQueryParser {
 		if(flags == null){
 			throw new IllegalArgumentException("parameter \"flags\" is null");
 		}
-		
+
 		if (flags.length != fields.length){
 		      throw new IllegalArgumentException("flags.length != fields.length");
-		}		
-		
-		BooleanQuery resultQuery = new BooleanQuery();		
+		}
+
+		BooleanQuery resultQuery = new BooleanQuery();
 		for(int i = 0; i < fields.length; i++){
 			if(fields[i] != null){
 				Query partQuery = parse(fields[i] , query);
-				if(partQuery != null && 
+				if(partQuery != null &&
 				          (!(partQuery instanceof BooleanQuery) || ((BooleanQuery)partQuery).getClauses().length>0)){
-					resultQuery.add(partQuery, flags[i]); 
+					resultQuery.add(partQuery, flags[i]);
 				}
-			}			
-		}		
+			}
+		}
 		return resultQuery;
 	}
-	
+
 	/**
 	 * 多Field多条件查询分析
 	 * @param fields
 	 * @param queries
 	 * @return Query 查询逻辑对象
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public static Query parseMultiField(String[] fields , String[] queries) throws IOException{
 		if(fields == null){
 			throw new IllegalArgumentException("parameter \"fields\" is null");
-		}				
+		}
 		if(queries == null){
 			throw new IllegalArgumentException("parameter \"queries\" is null");
-		}				
+		}
 		if (queries.length != fields.length){
 		      throw new IllegalArgumentException("queries.length != fields.length");
 		}
-		BooleanQuery resultQuery = new BooleanQuery();		
+		BooleanQuery resultQuery = new BooleanQuery();
 		for(int i = 0; i < fields.length; i++){
 			if(fields[i] != null){
 				Query partQuery = parse(fields[i] , queries[i]);
-				if(partQuery != null && 
+				if(partQuery != null &&
 				          (!(partQuery instanceof BooleanQuery) || ((BooleanQuery)partQuery).getClauses().length>0)){
-					resultQuery.add(partQuery, Occur.SHOULD); 
+					resultQuery.add(partQuery, Occur.SHOULD);
 				}
-			}			
-		}		
+			}
+		}
 		return resultQuery;
 	}
 
@@ -297,30 +297,30 @@ public final class IKQueryParser {
 	public static Query parseMultiField(String[] fields , String[] queries , BooleanClause.Occur[] flags) throws IOException{
 		if(fields == null){
 			throw new IllegalArgumentException("parameter \"fields\" is null");
-		}				
+		}
 		if(queries == null){
 			throw new IllegalArgumentException("parameter \"queries\" is null");
 		}
 		if(flags == null){
 			throw new IllegalArgumentException("parameter \"flags\" is null");
 		}
-		
+
 	    if (!(queries.length == fields.length && queries.length == flags.length)){
 	        throw new IllegalArgumentException("queries, fields, and flags array have have different length");
 	    }
 
-	    BooleanQuery resultQuery = new BooleanQuery();		
+	    BooleanQuery resultQuery = new BooleanQuery();
 		for(int i = 0; i < fields.length; i++){
 			if(fields[i] != null){
 				Query partQuery = parse(fields[i] , queries[i]);
-				if(partQuery != null && 
+				if(partQuery != null &&
 				          (!(partQuery instanceof BooleanQuery) || ((BooleanQuery)partQuery).getClauses().length>0)){
-					resultQuery.add(partQuery, flags[i]); 
+					resultQuery.add(partQuery, flags[i]);
 				}
-			}			
-		}		
+			}
+		}
 		return resultQuery;
-	}	
+	}
 	/**
 	 * 词元分支
 	 * 当分词出现歧义时，采用词元分支容纳不同的歧义组合
@@ -328,11 +328,11 @@ public final class IKQueryParser {
 	 *
 	 */
 	private static class TokenBranch{
-		
+
 		private static final int REFUSED = -1;
 		private static final int ACCEPTED = 0;
 		private static final int TONEXT = 1;
-		
+
 		//词元分支左边界
 		private int leftBorder;
 		//词元分支右边界
@@ -343,7 +343,7 @@ public final class IKQueryParser {
 		private List<TokenBranch> acceptedBranchs;
 		//当前分支的后一个相邻分支
 		private TokenBranch nextBranch;
-		
+
 		TokenBranch(Lexeme lexeme){
 			if(lexeme != null){
 				this.lexeme = lexeme;
@@ -352,7 +352,7 @@ public final class IKQueryParser {
 				this.rightBorder = lexeme.getEndPosition();
 			}
 		}
-		
+
 		public int getLeftBorder() {
 			return leftBorder;
 		}
@@ -380,11 +380,11 @@ public final class IKQueryParser {
 				return this.lexeme.hashCode() * 37;
 			}
 		}
-		
-		public boolean equals(Object o){			
+
+		public boolean equals(Object o){
 			if(o == null){
 				return false;
-			}		
+			}
 			if(this == o){
 				return true;
 			}
@@ -398,33 +398,33 @@ public final class IKQueryParser {
 				}
 			}else{
 				return false;
-			}			
-		}	
-		
+			}
+		}
+
 		/**
 		 * 组合词元分支
 		 * @param _lexeme
 		 * @return 返回当前branch能否接收词元对象
 		 */
 		boolean accept(Lexeme _lexeme){
-			
+
 			/*
 			 * 检查新的lexeme 对当前的branch 的可接受类型
 			 * acceptType : REFUSED  不能接受
 			 * acceptType : ACCEPTED 接受
-			 * acceptType : TONEXT   由相邻分支接受 
-			 */			
-			int acceptType = checkAccept(_lexeme);			
+			 * acceptType : TONEXT   由相邻分支接受
+			 */
+			int acceptType = checkAccept(_lexeme);
 			switch(acceptType){
 			case REFUSED:
 				// REFUSE 情况
 				return false;
-				
-			case ACCEPTED : 
+
+			case ACCEPTED :
 				if(acceptedBranchs == null){
 					//当前branch没有子branch，则添加到当前branch下
 					acceptedBranchs = new ArrayList<TokenBranch>(2);
-					acceptedBranchs.add(new TokenBranch(_lexeme));					
+					acceptedBranchs.add(new TokenBranch(_lexeme));
 				}else{
 					boolean acceptedByChild = false;
 					//当前branch拥有子branch，则优先由子branch接纳
@@ -434,15 +434,15 @@ public final class IKQueryParser {
 					//如果所有的子branch不能接纳，则由当前branch接纳
 					if(!acceptedByChild){
 						acceptedBranchs.add(new TokenBranch(_lexeme));
-					}					
+					}
 				}
 				//设置branch的最大右边界
 				if(_lexeme.getEndPosition() > this.rightBorder){
 					this.rightBorder = _lexeme.getEndPosition();
 				}
 				break;
-				
-			case TONEXT : 
+
+			case TONEXT :
 				//把lexeme放入当前branch的相邻分支
 				if(this.nextBranch == null){
 					//如果还没有相邻分支，则建立一个不交叠的分支
@@ -454,24 +454,24 @@ public final class IKQueryParser {
 
 			return true;
 		}
-		
+
 		/**
 		 * 将分支数据转成Query逻辑
 		 * @return
 		 */
-		List<Query> toQueries(String fieldName){			
-			List<Query> queries = new ArrayList<Query>(1);			
+		List<Query> toQueries(String fieldName){
+			List<Query> queries = new ArrayList<Query>(1);
  			//生成当前branch 的query
 			if(lexeme != null){
 				queries.add(new TermQuery(new Term(fieldName , lexeme.getLexemeText())));
-			}			
+			}
 			//生成child branch 的query
 			if(acceptedBranchs != null && acceptedBranchs.size() > 0){
 				if(acceptedBranchs.size() == 1){
 					Query onlyOneQuery = optimizeQueries(acceptedBranchs.get(0).toQueries(fieldName));
 					if(onlyOneQuery != null){
 						queries.add(onlyOneQuery);
-					}					
+					}
 				}else{
 					BooleanQuery orQuery = new BooleanQuery();
 					for(TokenBranch childBranch : acceptedBranchs){
@@ -484,26 +484,26 @@ public final class IKQueryParser {
 						queries.add(orQuery);
 					}
 				}
-			}			
+			}
 			//生成nextBranch的query
-			if(nextBranch != null){				
+			if(nextBranch != null){
 				queries.addAll(nextBranch.toQueries(fieldName));
 			}
-			return queries;	
+			return queries;
 		}
-		
+
 		/**
 		 * 判断指定的lexeme能否被当前的branch接受
-		 * @param lexeme
+		 * @param _lexeme
 		 * @return 返回接受的形式
 		 */
 		private int checkAccept(Lexeme _lexeme){
 			int acceptType = 0;
-			
+
 			if(_lexeme == null){
 				throw new IllegalArgumentException("parameter:lexeme is null");
 			}
-			
+
 			if(null == this.lexeme){//当前的branch是一个不交叠（ROOT）的分支
 				if(this.rightBorder > 0  //说明当前branch内至少有一个lexeme
 						&& _lexeme.getBeginPosition() >= this.rightBorder){
@@ -511,9 +511,9 @@ public final class IKQueryParser {
 					acceptType = TONEXT;
 				}else{
 					acceptType = ACCEPTED;
-				}				
+				}
 			}else{//当前的branch是一个有交叠的分支
-				
+
 				if(_lexeme.getBeginPosition() < this.lexeme.getBeginPosition()){
 					//_lexeme 的位置比 this.lexeme还靠前（这种情况不应该发生）
 					acceptType = REFUSED;
@@ -532,35 +532,35 @@ public final class IKQueryParser {
 			}
 			return acceptType;
 		}
-	
+
 	}
-	
+
 	/**
 	 * 查询表达式解析
 	 * alpha版本
 	 * 自定义lucene查询表达式
 	 * 表达式例子 ：
 	 * (id='1231231' && title:'monkey') || (content:'你好吗'  || ulr='www.ik.com') - name:'helloword'
-	 * 
+	 *
 	 * @author linliangyi
 	 * May 20, 2010
 	 */
 	static class ExpressionParser {
-		
+
 		//public static final String LUCENE_SPECIAL_CHAR = "&&||-()':={}[],";
-		
+
 		private List<Element> elements = new ArrayList<Element>();
-		
+
 		private Stack<Query> querys =  new Stack<Query>();
-		
+
 		private Stack<Element> operates = new Stack<Element>();
-		
+
 		public ExpressionParser(){
 		}
 
 		/**
 		 * 解析查询表达式，生成Lucene Query对象
-		 * 
+		 *
 		 * @param expression
 		 * @return
 		 */
@@ -580,21 +580,21 @@ public final class IKQueryParser {
 				elements.clear();
 				querys.clear();
 				operates.clear();
-			}		
+			}
 			return lucenceQuery;
 		}
-		
+
 		/**
 		 * 表达式文法解析
 		 * @param expression
 		 */
 		private void splitElements(String expression){
-	 		
+
 			if(expression == null){
 				return;
 			}
 			Element curretElement = null;
-			
+
 			char[] expChars = expression.toCharArray();
 			for(int i = 0 ; i < expChars.length ; i++){
 				switch(expChars[i]){
@@ -616,7 +616,7 @@ public final class IKQueryParser {
 						curretElement.append(expChars[i]);
 					}
 					break;
-					
+
 				case '|' :
 					if(curretElement == null){
 						curretElement = new Element();
@@ -633,9 +633,9 @@ public final class IKQueryParser {
 						curretElement = new Element();
 						curretElement.type = '|';
 						curretElement.append(expChars[i]);
-					}				
+					}
 					break;
-					
+
 				case '-' :
 					if(curretElement != null){
 						if(curretElement.type == '\''){
@@ -649,7 +649,7 @@ public final class IKQueryParser {
 					curretElement.type = '-';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;			
+					curretElement = null;
 					break;
 
 				case '(' :
@@ -665,8 +665,8 @@ public final class IKQueryParser {
 					curretElement.type = '(';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;			
-					break;				
+					curretElement = null;
+					break;
 
 				case ')' :
 					if(curretElement != null){
@@ -681,8 +681,8 @@ public final class IKQueryParser {
 					curretElement.type = ')';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;			
-					break;					
+					curretElement = null;
+					break;
 
 				case ':' :
 					if(curretElement != null){
@@ -697,9 +697,9 @@ public final class IKQueryParser {
 					curretElement.type = ':';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;			
-					break;	
-				
+					curretElement = null;
+					break;
+
 				case '=' :
 					if(curretElement != null){
 						if(curretElement.type == '\''){
@@ -713,8 +713,8 @@ public final class IKQueryParser {
 					curretElement.type = '=';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;			
-					break;					
+					curretElement = null;
+					break;
 
 				case ' ' :
 					if(curretElement != null){
@@ -725,26 +725,26 @@ public final class IKQueryParser {
 							curretElement = null;
 						}
 					}
-					
+
 					break;
-				
+
 				case '\'' :
 					if(curretElement == null){
 						curretElement = new Element();
 						curretElement.type = '\'';
-						
+
 					}else if(curretElement.type == '\''){
 						this.elements.add(curretElement);
 						curretElement = null;
-						
+
 					}else{
 						this.elements.add(curretElement);
 						curretElement = new Element();
 						curretElement.type = '\'';
-						
+
 					}
 					break;
-					
+
 				case '[':
 					if(curretElement != null){
 						if(curretElement.type == '\''){
@@ -758,9 +758,9 @@ public final class IKQueryParser {
 					curretElement.type = '[';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;					
+					curretElement = null;
 					break;
-					
+
 				case ']':
 					if(curretElement != null){
 						if(curretElement.type == '\''){
@@ -775,9 +775,9 @@ public final class IKQueryParser {
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
 					curretElement = null;
-					
+
 					break;
-					
+
 				case '{':
 					if(curretElement != null){
 						if(curretElement.type == '\''){
@@ -791,9 +791,9 @@ public final class IKQueryParser {
 					curretElement.type = '{';
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
-					curretElement = null;					
+					curretElement = null;
 					break;
-					
+
 				case '}':
 					if(curretElement != null){
 						if(curretElement.type == '\''){
@@ -808,7 +808,7 @@ public final class IKQueryParser {
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
 					curretElement = null;
-					
+
 					break;
 				case ',':
 					if(curretElement != null){
@@ -824,18 +824,18 @@ public final class IKQueryParser {
 					curretElement.append(expChars[i]);
 					this.elements.add(curretElement);
 					curretElement = null;
-					
+
 					break;
-					
+
 				default :
 					if(curretElement == null){
 						curretElement = new Element();
 						curretElement.type = 'F';
 						curretElement.append(expChars[i]);
-						
+
 					}else if(curretElement.type == 'F'){
 						curretElement.append(expChars[i]);
-						
+
 					}else if(curretElement.type == '\''){
 						curretElement.append(expChars[i]);
 
@@ -844,19 +844,19 @@ public final class IKQueryParser {
 						curretElement = new Element();
 						curretElement.type = 'F';
 						curretElement.append(expChars[i]);
-					}			
+					}
 				}
 			}
-			
+
 			if(curretElement != null){
 				this.elements.add(curretElement);
 				curretElement = null;
 			}
 		}
-		
+
 		/**
 		 * 语法解析
-		 * 
+		 *
 		 */
 		private void parseSyntax(){
 			for(int i = 0 ; i < this.elements.size() ; i++){
@@ -883,13 +883,13 @@ public final class IKQueryParser {
 								this.querys.push(tQuery);
 							}
 						}
-						
+
 					}else if('[' == e3.type || '{' == e3.type){
 						i+=2;
 						//处理 [] 和 {}
 						LinkedList<Element> eQueue = new LinkedList<Element>();
 						eQueue.add(e3);
-						for( i++ ; i < this.elements.size() ; i++){							
+						for( i++ ; i < this.elements.size() ; i++){
 							Element eN = this.elements.get(i);
 							eQueue.add(eN);
 							if(']' == eN.type || '}' == eN.type){
@@ -902,10 +902,10 @@ public final class IKQueryParser {
 					}else{
 						throw new IllegalStateException("表达式异常：匹配值丢失");
 					}
-					
+
 				}else if('(' == e.type){
 					this.operates.push(e);
-					
+
 				}else if(')' == e.type){
 					boolean doPop = true;
 					while(doPop && !this.operates.empty()){
@@ -916,10 +916,10 @@ public final class IKQueryParser {
 							Query q = toQuery(op);
 							this.querys.push(q);
 						}
-						
+
 					}
-				}else{ 
-					
+				}else{
+
 					if(this.operates.isEmpty()){
 						this.operates.push(e);
 					}else{
@@ -942,21 +942,21 @@ public final class IKQueryParser {
 								this.querys.push(q);
 							}
 						}
-						
+
 						if(doPeek && this.operates.empty()){
 							this.operates.push(e);
 						}
 					}
-				}			
+				}
 			}
-			
+
 			while(!this.operates.isEmpty()){
 				Element eleOnTop = this.operates.pop();
 				Query q = toQuery(eleOnTop);
-				this.querys.push(q);			
-			}		
+				this.querys.push(q);
+			}
 		}
-		
+
 		/**
 		 * 根据逻辑操作符，生成BooleanQuery
 		 * @param op
@@ -966,129 +966,129 @@ public final class IKQueryParser {
 			if(this.querys.size() == 0){
 				return null;
 			}
-			
+
 			BooleanQuery resultQuery = new BooleanQuery();
 
 			if(this.querys.size() == 1){
 				return this.querys.get(0);
 			}
-			
+
 			Query q2 = this.querys.pop();
 			Query q1 = this.querys.pop();
 			if('&' == op.type){
 				if(q1 != null){
 					if(q1 instanceof BooleanQuery){
 						BooleanClause[] clauses = ((BooleanQuery)q1).getClauses();
-						if(clauses.length > 0 
+						if(clauses.length > 0
 								&& clauses[0].getOccur() == Occur.MUST){
 							for(BooleanClause c : clauses){
 								resultQuery.add(c);
-							}					
+							}
 						}else{
 							resultQuery.add(q1,Occur.MUST);
 						}
 
 					}else{
-						//q1 instanceof TermQuery 
-						//q1 instanceof TermRangeQuery 
+						//q1 instanceof TermQuery
+						//q1 instanceof TermRangeQuery
 						//q1 instanceof PhraseQuery
 						//others
 						resultQuery.add(q1,Occur.MUST);
 					}
 				}
-				
+
 				if(q2 != null){
 					if(q2 instanceof BooleanQuery){
 						BooleanClause[] clauses = ((BooleanQuery)q2).getClauses();
-						if(clauses.length > 0 
+						if(clauses.length > 0
 								&& clauses[0].getOccur() == Occur.MUST){
 							for(BooleanClause c : clauses){
 								resultQuery.add(c);
-							}					
+							}
 						}else{
 							resultQuery.add(q2,Occur.MUST);
 						}
-						
+
 					}else{
-						//q1 instanceof TermQuery 
-						//q1 instanceof TermRangeQuery 
+						//q1 instanceof TermQuery
+						//q1 instanceof TermRangeQuery
 						//q1 instanceof PhraseQuery
 						//others
 						resultQuery.add(q2,Occur.MUST);
 					}
 				}
-				
+
 			}else if('|' == op.type){
 				if(q1 != null){
 					if(q1 instanceof BooleanQuery){
 						BooleanClause[] clauses = ((BooleanQuery)q1).getClauses();
-						if(clauses.length > 0 
+						if(clauses.length > 0
 								&& clauses[0].getOccur() == Occur.SHOULD){
 							for(BooleanClause c : clauses){
 								resultQuery.add(c);
-							}					
+							}
 						}else{
 							resultQuery.add(q1,Occur.SHOULD);
 						}
-						
+
 					}else{
-						//q1 instanceof TermQuery 
-						//q1 instanceof TermRangeQuery 
+						//q1 instanceof TermQuery
+						//q1 instanceof TermRangeQuery
 						//q1 instanceof PhraseQuery
 						//others
 						resultQuery.add(q1,Occur.SHOULD);
 					}
 				}
-				
+
 				if(q2 != null){
 					if(q2 instanceof BooleanQuery){
 						BooleanClause[] clauses = ((BooleanQuery)q2).getClauses();
-						if(clauses.length > 0 
+						if(clauses.length > 0
 								&& clauses[0].getOccur() == Occur.SHOULD){
 							for(BooleanClause c : clauses){
 								resultQuery.add(c);
-							}					
+							}
 						}else{
 							resultQuery.add(q2,Occur.SHOULD);
 						}
 					}else{
-						//q2 instanceof TermQuery 
-						//q2 instanceof TermRangeQuery 
+						//q2 instanceof TermQuery
+						//q2 instanceof TermRangeQuery
 						//q2 instanceof PhraseQuery
 						//others
 						resultQuery.add(q2,Occur.SHOULD);
-						
+
 					}
 				}
-				
+
 			}else if('-' == op.type){
 				if(q1 == null || q2 == null){
 					throw new IllegalStateException("表达式异常：SubQuery 个数不匹配");
 				}
-				
+
 				if(q1 instanceof BooleanQuery){
 					BooleanClause[] clauses = ((BooleanQuery)q1).getClauses();
 					if(clauses.length > 0){
 						for(BooleanClause c : clauses){
 							resultQuery.add(c);
-						}					
+						}
 					}else{
 						resultQuery.add(q1,Occur.MUST);
 					}
 
 				}else{
-					//q1 instanceof TermQuery 
-					//q1 instanceof TermRangeQuery 
+					//q1 instanceof TermQuery
+					//q1 instanceof TermRangeQuery
 					//q1 instanceof PhraseQuery
 					//others
 					resultQuery.add(q1,Occur.MUST);
-				}				
-				
+				}
+
 				resultQuery.add(q2,Occur.MUST_NOT);
 			}
 			return resultQuery;
 		}
-		
+
 		/**
 		 * 组装TermRangeQuery
 		 * @param elements
@@ -1120,7 +1120,7 @@ public final class IKQueryParser {
 			}
 			if(elements.size() < 4 || elements.size() > 5){
 				throw new IllegalStateException("表达式异常, RangeQuery 错误");
-			}			
+			}
 			//读出中间部分
 			Element e2 = elements.get(1);
 			if('\'' == e2.type){
@@ -1136,7 +1136,7 @@ public final class IKQueryParser {
 					lastValue = e4.toString();
 				}else if(e4 != last){
 					throw new IllegalStateException("表达式异常，RangeQuery格式错误");
-				}				
+				}
 			}else if(',' == e2.type){
 				firstValue = null;
 				//
@@ -1146,14 +1146,14 @@ public final class IKQueryParser {
 				}else{
 					throw new IllegalStateException("表达式异常，RangeQuery格式错误");
 				}
-				
+
 			}else {
 				throw new IllegalStateException("表达式异常, RangeQuery格式错误");
 			}
-			
-			return new TermRangeQuery(fieldNameEle.toString() , firstValue , lastValue , includeFirst , includeLast);
+
+			return TermRangeQuery.newStringRange(fieldNameEle.toString() , firstValue , lastValue , includeFirst , includeLast);
 		}
-		
+
 		/**
 		 * 组装Lucene Query
 		 * 处理关键字紧凑搜索
@@ -1164,17 +1164,15 @@ public final class IKQueryParser {
 			//截取头部^尾部$
 			keyword = keyword.substring(1 , keyword.length() - 1);
 			String luceneExp = fieldName + ":\"" + keyword + "\"";
-			QueryParser luceneQueryParser = new QueryParser(Version.LUCENE_30 , "" ,new IKAnalyzer());
+			QueryParser luceneQueryParser = new QueryParser(VersionUtil.VERSION , "" ,new IKAnalyzer());
 			try {
-				Query lucenceQuery = luceneQueryParser.parse(luceneExp);
-				return lucenceQuery;
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}								
-			return null;			
+				return luceneQueryParser.parse(luceneExp);
+			} catch (Exception e) {
+				return null;
+			}
 		}
-		
-		
+
+
 		/**
 		 * 比较操作符优先级
 		 * @param e1
@@ -1204,10 +1202,10 @@ public final class IKQueryParser {
 				}
 			}
 		}
-		
+
 		/**
 		 * 表达式元素
-		 * 
+		 *
 		 * @author linliangyi
 		 * May 20, 2010
 		 */
@@ -1218,15 +1216,15 @@ public final class IKQueryParser {
 			public Element(){
 				eleTextBuff = new StringBuffer();
 			}
-			
+
 			public void append(char c){
 				this.eleTextBuff.append(c);
 			}
-		
+
 			public String toString(){
 				return this.eleTextBuff.toString();
 			}
-			
+
 		}
 	}
 	public static void main(String[] args){
@@ -1236,5 +1234,5 @@ public final class IKQueryParser {
 //		Query result = IKQueryParser.parse("(newsKeyword='---' || newsTitle:'---' || newsContent:'---') && newsClass='1'");
 		System.out.println(result);
 
-	}	
+	}
 }

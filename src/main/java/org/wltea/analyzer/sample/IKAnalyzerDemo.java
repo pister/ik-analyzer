@@ -8,8 +8,9 @@ import java.io.IOException;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.*;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -17,6 +18,7 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
+import org.wltea.analyzer.help.VersionUtil;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 import org.wltea.analyzer.lucene.IKQueryParser;
 import org.wltea.analyzer.lucene.IKSimilarity;
@@ -40,18 +42,22 @@ public class IKAnalyzerDemo {
 		Directory directory = null;
 		IndexWriter iwriter = null;
 		IndexSearcher isearcher = null;
+        IndexReader indexReader = null;
 		try {
 			//建立内存索引对象
-			directory = new RAMDirectory();	 
-			iwriter = new IndexWriter(directory, analyzer, true , IndexWriter.MaxFieldLength.LIMITED);
+			directory = new RAMDirectory();
+            IndexWriterConfig indexWriterConfig = new IndexWriterConfig(VersionUtil.VERSION, analyzer);
+            iwriter = new IndexWriter(directory, indexWriterConfig);
+			//iwriter = new IndexWriter(directory, analyzer, true , IndexWriter.MaxFieldLength.LIMITED);
 			Document doc = new Document();
-			doc.add(new Field("ID", "10000", Field.Store.YES, Field.Index.NOT_ANALYZED));
-			doc.add(new Field(fieldName, text, Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new StringField("ID", "10000", Field.Store.YES));
+			doc.add(new TextField(fieldName, text, Field.Store.YES));
 			iwriter.addDocument(doc);
 			iwriter.close();
 			
-		    //实例化搜索器   
-			isearcher = new IndexSearcher(directory);			
+		    //实例化搜索器
+            indexReader =  DirectoryReader.open(directory);
+			isearcher = new IndexSearcher(indexReader);
 			//在索引器中使用IKSimilarity相似度评估器
 			isearcher.setSimilarity(new IKSimilarity());
 			
@@ -77,9 +83,9 @@ public class IKAnalyzerDemo {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally{
-			if(isearcher != null){
+			if(indexReader != null){
 				try {
-					isearcher.close();
+                    indexReader.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
