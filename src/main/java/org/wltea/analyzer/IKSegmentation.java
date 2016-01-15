@@ -167,7 +167,7 @@ public final class IKSegmentation{
      * @param input
      */
 	public synchronized void reset(Reader input) {
-		this.input = input;
+		// this.input = input;
 		context.resetContext();
 		for(ISegmenter segmenter : segmenters){
 			segmenter.reset();
